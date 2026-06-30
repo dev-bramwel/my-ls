@@ -40,10 +40,12 @@ func FormatLong(file fs.FileInfo) string {
 	// Format modification time like ls does
 	date := formatDate(file.ModTime)
 
+	coloredName := getColorizedName(file.Name, file.Mode)
+
 	// Build the name - include symlink target if applicable
-	name := file.Name
+	name := coloredName
 	if file.IsSymlink && file.SymlinkTarget != "" {
-		name = file.Name + " -> " + file.SymlinkTarget
+		name = coloredName + " -> " + file.SymlinkTarget
 	}
 
 	// Build final output with proper spacing
@@ -199,7 +201,8 @@ func formatDate(t time.Time) string {
 // No return value - writes directly to stdout.
 func PrintStandard(files []fs.FileInfo) {
 	for _, file := range files {
-		fmt.Print(file.Name + " ")
+		coloredName := getColorizedName(file.Name, file.Mode)
+		fmt.Print(coloredName + " ")
 	}
 	fmt.Print("\n")
 }
@@ -268,4 +271,26 @@ func PrintRecursive(path string, showHidden bool, longFormat bool) error {
 	}
 
 	return nil
+}
+
+// getColorizedName wraps the filename in ANSI escape sequence codes depending on type.
+func getColorizedName(name string, mode uint32) string {
+	const (
+		reset = "\033[0m"
+		blue  = "\033[34m"
+		green = "\033[32m"
+	)
+
+	fileType := mode & 0o170000
+
+	switch fileType {
+	case 0o040000: // S_IFDIR (Directory)
+		return fmt.Sprintf("%s%s%s", blue, name, reset)
+	default:
+		// Check for any executable permission bit (S_IXUSR, S_IXGRP, S_IXOTH)
+		if mode&0o0111 != 0 {
+			return fmt.Sprintf("%s%s%s", green, name, reset)
+		}
+	}
+	return name
 }

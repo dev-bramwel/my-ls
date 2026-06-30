@@ -14,9 +14,9 @@ import (
 
 const (
 	Reset  = "\033[0m"
-	Blue   = "\033[34m" // For Directories
-	Green  = "\033[32m" // For Executables
-	Cyan   = "\033[36m" // For Symlinks (Optional bonus styling)
+	Blue   = "\033[1;34m" // For Directories
+	Green  = "\033[1;32m" // For Executables
+	Cyan   = "\033[1;36m" // For Symlinks (Optional bonus styling)
 )
 
 // FormatName applies ANSI color codes based on the file type and permissions.

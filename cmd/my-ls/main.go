@@ -7,10 +7,10 @@ import (
 	"os"
 	// my-ls/pkg/config - provides flag parsing functionality
 	"my-ls/pkg/config"
-	// my-ls/pkg/fs - provides file reading and sorting functionality
-	"my-ls/pkg/fs"
 	// my-ls/pkg/display - provides output formatting functionality
 	"my-ls/pkg/display"
+	// my-ls/pkg/fs - provides file reading and sorting functionality
+	"my-ls/pkg/fs"
 )
 
 func main() {
@@ -18,6 +18,10 @@ func main() {
 	// We skip the first argument to get only the user-provided flags and paths
 	// config.ParseArgs returns parsed Options struct and slice of target paths
 	opts, paths := config.ParseArgs(os.Args[1:])
+
+	// Sort the top-level target paths case-insensitively before iterating
+	// This ensures that multiple arguments match the global execution sequence of standard ls
+	sortPaths(paths, opts.Reverse)
 
 	// Track if we're processing multiple paths (affects output formatting)
 	multiplePaths := len(paths) > 1
@@ -84,4 +88,40 @@ func main() {
 			fmt.Print("\n")
 		}
 	}
+}
+
+// sortPaths handles sorting the top-level path strings case-insensitively using selection sort.
+func sortPaths(paths []string, reverse bool) {
+	n := len(paths)
+	for i := 0; i < n-1; i++ {
+		extreme := i
+		for j := i + 1; j < n; j++ {
+			nameJ := toLowerStr(paths[j])
+			nameExt := toLowerStr(paths[extreme])
+
+			if !reverse {
+				if nameJ < nameExt || (nameJ == nameExt && paths[j] < paths[extreme]) {
+					extreme = j
+				}
+			} else {
+				if nameJ > nameExt || (nameJ == nameExt && paths[j] > paths[extreme]) {
+					extreme = j
+				}
+			}
+		}
+		if extreme != i {
+			paths[i], paths[extreme] = paths[extreme], paths[i]
+		}
+	}
+}
+
+// toLowerStr converts an ASCII string argument to lowercase for evaluation comparisons.
+func toLowerStr(s string) string {
+	b := []byte(s)
+	for i := 0; i < len(b); i++ {
+		if b[i] >= 'A' && b[i] <= 'Z' {
+			b[i] += 32
+		}
+	}
+	return string(b)
 }

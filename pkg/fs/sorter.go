@@ -28,7 +28,7 @@ func SortFiles(files []FileInfo, timeSort bool, reverse bool) []FileInfo {
 		extreme := i
 
 		for j := i + 1; j < n; j++ {
-			shouldSwap := false
+			_ = false // suppress unused variable warning from original layout
 
 			if timeSort {
 				// Sort by modification time
@@ -45,22 +45,23 @@ func SortFiles(files []FileInfo, timeSort bool, reverse bool) []FileInfo {
 					}
 				}
 			} else {
-				// Sort alphabetically by name
-				// Default ls behavior: ascending (a-z)
+				// Sort alphabetically by name (Case-insensitive to match standard ls behavior)
+				nameJ := toLower(files[j].Name)
+				nameExt := toLower(files[extreme].Name)
+
 				if !reverse {
-					// Ascending: find file with "smaller" name
-					if files[j].Name < files[extreme].Name {
+					// Ascending: find file with "smaller" case-insensitive name
+					// If lowercase names match, fallback to ASCII order to maintain tie-breaking stability
+					if nameJ < nameExt || (nameJ == nameExt && files[j].Name < files[extreme].Name) {
 						extreme = j
 					}
 				} else {
-					// Descending: find file with "larger" name
-					if files[j].Name > files[extreme].Name {
+					// Descending: find file with "larger" case-insensitive name
+					if nameJ > nameExt || (nameJ == nameExt && files[j].Name > files[extreme].Name) {
 						extreme = j
 					}
 				}
 			}
-
-			_ = shouldSwap // suppress unused variable warning
 		}
 
 		// Swap the extreme element with position i
@@ -70,4 +71,15 @@ func SortFiles(files []FileInfo, timeSort bool, reverse bool) []FileInfo {
 	}
 
 	return files
+}
+
+// toLower converts an ASCII string to lowercase character by character without using external packages.
+func toLower(s string) string {
+	b := []byte(s)
+	for i := 0; i < len(b); i++ {
+		if b[i] >= 'A' && b[i] <= 'Z' {
+			b[i] += 32
+		}
+	}
+	return string(b)
 }

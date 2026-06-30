@@ -274,11 +274,12 @@ func PrintRecursive(path string, showHidden bool, longFormat bool) error {
 }
 
 // getColorizedName wraps the filename in ANSI escape sequence codes depending on type.
+// getColorizedName wraps the filename in ANSI escape sequence codes depending on type.
 func getColorizedName(name string, mode uint32) string {
 	const (
 		reset = "\033[0m"
-		blue  = "\033[34m"
-		green = "\033[32m"
+		blue  = "\033[1;34m" // Bold Blue
+		green = "\033[1;32m" // Bold Green
 	)
 
 	fileType := mode & 0o170000

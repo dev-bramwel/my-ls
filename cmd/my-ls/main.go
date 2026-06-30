@@ -88,6 +88,10 @@ func main() {
 			fmt.Print("\n")
 		}
 	}
+	// Add a final trailing newline on exit if standard inline output was utilized
+	if !opts.LongFormat {
+		fmt.Print("\n")
+	}
 }
 
 // sortPaths handles sorting the top-level path strings case-insensitively using selection sort.

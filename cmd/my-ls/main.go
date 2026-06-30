@@ -20,7 +20,6 @@ func main() {
 	opts, paths := config.ParseArgs(os.Args[1:])
 
 	// Sort the top-level target paths case-insensitively before iterating
-	// This ensures that multiple arguments match the global execution sequence of standard ls
 	sortPaths(paths, opts.Reverse)
 
 	// Track if we're processing multiple paths (affects output formatting)
@@ -88,6 +87,7 @@ func main() {
 			fmt.Print("\n")
 		}
 	}
+
 	// Add a final trailing newline on exit if standard inline output was utilized
 	if !opts.LongFormat {
 		fmt.Print("\n")
@@ -119,8 +119,11 @@ func sortPaths(paths []string, reverse bool) {
 	}
 }
 
-// toLowerStr converts an ASCII string argument to lowercase for evaluation comparisons.
+// toLowerStr converts an ASCII string argument to lowercase for evaluation comparisons, ignoring leading dots.
 func toLowerStr(s string) string {
+	if len(s) > 1 && s[0] == '.' && s != ".." {
+		s = s[1:]
+	}
 	b := []byte(s)
 	for i := 0; i < len(b); i++ {
 		if b[i] >= 'A' && b[i] <= 'Z' {

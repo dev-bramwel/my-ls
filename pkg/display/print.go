@@ -202,7 +202,7 @@ func formatDate(t time.Time) string {
 func PrintStandard(files []fs.FileInfo) {
 	for _, file := range files {
 		coloredName := getColorizedName(file.Name, file.Mode)
-		fmt.Print(coloredName + " ")
+		fmt.Print(coloredName + "  ")
 	}
 	fmt.Print("\n")
 }

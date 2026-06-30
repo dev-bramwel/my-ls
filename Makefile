@@ -2,6 +2,12 @@
 BINARY_NAME=my-ls
 CMD_PATH=./cmd/my-ls
 
+# Intercept command-line arguments after "make run"
+ifeq ($(firstword $(MAKECMDGOALS)),run)
+  RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(eval $(RUN_ARGS):;@:)
+endif
+
 .PHONY: all build clean test run help
 
 all: clean test build
@@ -12,7 +18,7 @@ build:
 	@echo "✅ Build complete! Binary located at: ./$(BINARY_NAME)"
 
 run:
-	@go run $(CMD_PATH)
+	@go run $(CMD_PATH) $(RUN_ARGS)
 
 test:
 	@echo "🧪 Running unit tests..."
@@ -26,7 +32,8 @@ clean:
 
 help:
 	@echo "Available targets:"
-	@echo "  make build  - Compile the Go binary into the project root"
-	@echo "  make run    - Run the application directly using go run"
-	@echo "  make test   - Execute all unit tests"
-	@echo "  make clean  - Remove build directories and binary files"
+	@echo "  make build      - Compile the Go binary into the project root"
+	@echo "  make run        - Run the application directly using go run"
+	@echo "  make run --     - Usage with flags, i.e: make run -- -l -a"
+	@echo "  make test       - Execute all unit tests"
+	@echo "  make clean      - Remove build directories and binary files"

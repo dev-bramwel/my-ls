@@ -18,4 +18,6 @@ type FileInfo struct {
 	LinkCount   uint64  // Needed for -l
 	Owner       string  // Needed for -l
 	Group       string  // Needed for -l
+	Blocks      int64  // Add this field to track raw 512B system blocks
 }
+

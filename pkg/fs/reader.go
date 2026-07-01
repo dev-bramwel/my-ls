@@ -56,6 +56,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 					LinkCount:  uint64(stat.Nlink),
 					Owner:      owner,
 					Group:      group,
+					Blocks:     stat.Blocks, // Capture blocks
 				})
 			}
 		}
@@ -67,16 +68,17 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 			owner, group := getOwnership(info)
 			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 				files = append(files, FileInfo{
-					Name:       "..",
-					Path:       parentPath,
+					Name:       ".",
+					Path:       path,
 					IsDir:      true,
-					Size:       0,
+					Size:       0, 
 					ModTime:    info.ModTime(),
 					ModeString: info.Mode().String(),
 					Mode:       uint32(stat.Mode),
 					LinkCount:  uint64(stat.Nlink),
 					Owner:      owner,
 					Group:      group,
+					Blocks:     stat.Blocks, // Capture blocks
 				})
 			}
 		}
@@ -151,6 +153,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 		// Extract link count from syscall.Stat_t
 		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 			file.LinkCount = uint64(stat.Nlink)
+			file.Blocks = stat.Blocks // Capture blocks here safely
 		}
 
 		files = append(files, file)

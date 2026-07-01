@@ -212,7 +212,10 @@ func getOwnership(info os.FileInfo) (owner string, group string) {
 //
 // Scope: Performs single stat call, no side effects.
 func IsDirectory(path string) (bool, error) {
-	info, err := os.Stat(path)
+	// AUDIT FIX: Use os.Lstat instead of os.Stat. 
+	// This ensures a raw 'sym_dir' target evaluates as a symbolic link file (info.IsDir() == false),
+	// while 'sym_dir/' with a trailing slash is automatically evaluated by the OS as the target directory.
+	info, err := os.Lstat(path)
 	if err != nil {
 		return false, err
 	}
@@ -262,33 +265,45 @@ func IsSymlink(path string) (bool, bool, error) {
 //
 // Scope: Creates single FileInfo from os.Stat result.
 func ReadFile(path string) (*FileInfo, error) {
-	info, err := os.Stat(path)
+	// AUDIT FIX: Use Lstat instead of Stat so symlink metadata isn't overwritten by the target file
+	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if it's a symlink
+	// Check if it's a symlink using the correct Lstat mode bits
 	isSymlink := info.Mode()&os.ModeSymlink != 0
+
+	// For symlinks, read the target path to enable the "-> target" display
+	var symlinkTarget string
+	if isSymlink {
+		target, err := os.Readlink(path)
+		if err == nil {
+			symlinkTarget = target
+		}
+	}
 
 	// Extract ownership
 	owner, group := getOwnership(info)
 
 	file := &FileInfo{
-		Name:     info.Name(),
-		Path:     path,
-		IsDir:    info.IsDir(),
-		IsSymlink: isSymlink,
-		Size:     info.Size(),
-		ModTime:  info.ModTime(),
-		Mode:     0,
-		Owner:    owner,
-		Group:    group,
+		Name:          path,
+		Path:          path,
+		IsDir:         info.IsDir() && !isSymlink,
+		IsSymlink:     isSymlink,
+		SymlinkTarget: symlinkTarget,
+		Size:          info.Size(),
+		ModTime:       info.ModTime(),
+		Mode:          0,
+		Owner:         owner,
+		Group:         group,
 	}
 
 	// Extract link count and mode bits from syscall.Stat_t
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 		file.LinkCount = uint64(stat.Nlink)
 		file.Mode = uint32(stat.Mode)
+		file.Blocks = stat.Blocks
 	}
 
 	return file, nil

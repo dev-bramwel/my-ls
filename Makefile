@@ -28,6 +28,6 @@ help:
 	@echo "Available targets:"
 	@echo "  make build      - Compile the Go binary into the project root"
 	@echo "  make run        - Run the application directly using go run"
-	@echo "  make run ARGS=\"-l -a README.md\" - Run with specific flags and paths"
+	@echo "  make run ARGS="-l -a README.md" - Run with specific flags and paths"
 	@echo "  make test       - Execute all unit tests"
 	@echo "  make clean      - Remove build directories and binary files"

@@ -30,7 +30,13 @@ func main() {
 		// Check if the path exists and whether it's a file or directory
 		isDir, err := fs.IsDirectory(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ls: cannot access '%s': No such file or directory\n", path)
+			// AUDIT FIX: Use err.Error() or unwrap the path error to extract the exact OS message
+			// This dynamically outputs "Not a directory" or "No such file or directory" to match system ls.
+			if pathErr, ok := err.(*os.PathError); ok {
+				fmt.Fprintf(os.Stderr, "ls: cannot access '%s': %s\n", path, pathErr.Err.Error())
+			} else {
+				fmt.Fprintf(os.Stderr, "ls: cannot access '%s': %s\n", path, err.Error())
+			}
 			continue
 		}
 

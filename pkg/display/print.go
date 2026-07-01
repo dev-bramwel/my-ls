@@ -20,6 +20,12 @@ import (
 // Each file name is printed on the same line, matching standard ls behavior.
 // No return value - writes directly to stdout.
 func PrintStandard(files []fs.FileInfo) {
+	// AUDIT FIX: If the directory is completely empty, standard ls prints absolutely nothing.
+	// Skipping the loop and the trailing newline prevents an unexpected blank line.
+	if len(files) == 0 {
+		return
+	}
+
 	for _, file := range files {
 		coloredName := getColorizedName(file.Name, file.Mode)
 		fmt.Print(coloredName + "  ")

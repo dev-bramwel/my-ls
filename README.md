@@ -9,10 +9,6 @@ Environment: Unix / Linux Environment Alignment
 
 Date: July 2026
 
-my-ls Project Documentation 1
-
-Section 1: User Guide (README)
-
 Project Overview
 my-ls is a production-grade, POSIX-compliant implementation of the core storage-listing utility ls
 engineered entirely in Go. Built from the ground up without relying on high-level diagnostic frameworks, the
@@ -41,8 +37,6 @@ To clear temporary artifacts, stale binaries, and garbage objects generated duri
 the clean target immediately following your evaluation loop:
 
 $ make clean
-
-my-ls Project Documentation 2
 
 Interactive Usage & Supported Flags
 The application seamlessly parses individual and aggregated flag string clusters to dynamically adjust

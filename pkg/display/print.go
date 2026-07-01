@@ -118,11 +118,13 @@ func PrintRecursive(path string, showHidden bool, longFormat bool) error {
 }
 
 // getColorizedName wraps the filename in ANSI escape sequence codes depending on type.
+// getColorizedName wraps the filename in ANSI escape sequence codes depending on type.
 func getColorizedName(name string, mode uint32) string {
 	const (
 		reset = "\033[0m"
-		blue  = "\033[1;34m" // Bold Blue
-		green = "\033[1;32m" // Bold Green
+		blue  = "\033[1;34m" // Bold Blue for Directories
+		cyan  = "\033[1;36m" // Cyan for Symbolic Links
+		green = "\033[1;32m" // Bold Green for Executables
 	)
 
 	fileType := mode & 0o170000
@@ -130,8 +132,10 @@ func getColorizedName(name string, mode uint32) string {
 	switch fileType {
 	case 0o040000: // S_IFDIR (Directory)
 		return fmt.Sprintf("%s%s%s", blue, name, reset)
+	case 0o120000: // S_IFLNK (Symbolic Link)
+		return fmt.Sprintf("%s%s%s", cyan, name, reset)
 	default:
-		// Check for any executable permission bit (S_IXUSR, S_IXGRP, S_IXOTH)
+		// Check for executable flags only if it's a standard file
 		if mode&0o0111 != 0 {
 			return fmt.Sprintf("%s%s%s", green, name, reset)
 		}

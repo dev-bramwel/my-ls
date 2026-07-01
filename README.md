@@ -74,3 +74,8 @@ ln -sf test_ls/dir1 test_ls/sym_dir
 
 # 4. Force uniform timestamps for the matching modification time test
 find test_ls -exec touch -t 202607011200 {} +
+
+Once testing is complete, you can drop the temporary environment instantly using:
+
+# Bash
+rm -rf test_ls

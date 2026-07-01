@@ -33,7 +33,21 @@ func SortFiles(files []FileInfo, timeSort bool, reverse bool) []FileInfo {
 			if timeSort {
 				// Sort by modification time
 				// Default ls -t behavior: newest first (descending)
-				if !reverse {
+				if files[j].ModTime.Equal(files[extreme].ModTime) {
+					// Fall back to alphabetical sorting when modification times are identical
+					nameJ := toLower(files[j].Name)
+					nameExt := toLower(files[extreme].Name)
+
+					if !reverse {
+						if nameJ < nameExt || (nameJ == nameExt && files[j].Name < files[extreme].Name) {
+							extreme = j
+						}
+					} else {
+						if nameJ > nameExt || (nameJ == nameExt && files[j].Name > files[extreme].Name) {
+							extreme = j
+						}
+					}
+				} else if !reverse {
 					// Descending: find file with LATER time
 					if files[j].ModTime.After(files[extreme].ModTime) {
 						extreme = j

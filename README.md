@@ -56,3 +56,21 @@ Execute all decoupled unit testing suites directly across localized packages usi
 ```bash
 make test
 ```
+
+to create a test environment, you can Copy and paste this script directly into your terminal. It sets up files, nested subdirectories, a dash-named folder, device lookups, synchronized timestamps, and symbolic links exactly as the questionnaire mandates:
+
+Bash
+
+# 1. Base Structure & Files
+mkdir -p test_ls/dir1/subdir1 test_ls/dir2
+touch test_ls/file1.txt test_ls/file2.txt test_ls/dir1/subdir1/nested.txt
+
+# 2. Folder with '-' as a name
+mkdir -p test_ls/-
+
+# 3. Symbolic Links (Files and Directories)
+ln -sf test_ls/file1.txt test_ls/sym_file
+ln -sf test_ls/dir1 test_ls/sym_dir
+
+# 4. Force uniform timestamps for the matching modification time test
+find test_ls -exec touch -t 202607011200 {} +

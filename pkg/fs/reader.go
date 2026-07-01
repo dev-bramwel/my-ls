@@ -68,7 +68,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 			owner, group := getOwnership(info)
 			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 				files = append(files, FileInfo{
-					Name:       ".",
+					Name:       "..",
 					Path:       path,
 					IsDir:      true,
 					Size:       0, 

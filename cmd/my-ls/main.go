@@ -22,31 +22,63 @@ func main() {
 	// Sort the top-level target paths case-insensitively before iterating
 	sortPaths(paths, opts.Reverse)
 
-	// Track if we're processing multiple paths (affects output formatting)
-	multiplePaths := len(paths) > 1
+	var filesOnly []fs.FileInfo
+	var dirsOnly []string
 
-	// Process each path provided on the command line
-	for i, path := range paths {
+	// First pass: Validate paths and segregate files from directories
+	for _, path := range paths {
 		// Check if the path exists and whether it's a file or directory
-		// fs.IsDirectory returns true if path is a directory, false otherwise
-		// Error handling: prints error message and continues to next path
 		isDir, err := fs.IsDirectory(path)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ls: cannot access '%s': No such file or directory\n", path)
 			continue
 		}
 
-		// Print header for multiple paths or for directories with -l/-R flag
-		// This matches ls behavior of printing "path:\n" before contents
-		if multiplePaths || (isDir && (opts.LongFormat || opts.Recursive)) {
+		if isDir {
+			dirsOnly = append(dirsOnly, path)
+		} else {
+			file, err := fs.ReadFile(path)
+			if err == nil {
+				filesOnly = append(filesOnly, *file)
+			}
+		}
+	}
+
+	// Track if we have a mixed output or multiple directory headers to print
+	hasFiles := len(filesOnly) > 0
+	hasDirs := len(dirsOnly) > 0
+	multipleDirs := len(dirsOnly) > 1 || (hasFiles && hasDirs)
+
+	// Print all standalone files first on a single line (unless using -l)
+	if hasFiles {
+		// Sort regular file targets according to sorting flags
+		fs.SortFiles(filesOnly, opts.TimeSort, opts.Reverse)
+
+		if opts.LongFormat {
+			display.PrintLong(filesOnly, false)
+		} else {
+			// Utilize standard display logic to safely print inline file names with proper colorization
+			display.PrintStandard(filesOnly)
+		}
+
+		// Add an extra newline separation if directories follow the files
+		if hasDirs {
+			fmt.Print("\n")
+		}
+	}
+
+	// Second pass: Process each directory target cleanly
+	for i, path := range dirsOnly {
+		// Print header for directories if there are multiple targets
+		if multipleDirs {
 			fmt.Printf("%s:\n", path)
 		}
 
-		if opts.Recursive && isDir {
+		if opts.Recursive {
 			// -R flag: recursively list all subdirectories
 			// display.PrintRecursive handles the entire recursive traversal
 			_ = display.PrintRecursive(path, opts.ShowAll, opts.LongFormat)
-		} else if isDir {
+		} else {
 			// Path is a directory - read contents
 			// fs.ReadDir returns FileInfo slice for directory entries
 			// showHidden controls whether dotfiles (starting with '.') are included
@@ -70,27 +102,12 @@ func main() {
 			} else {
 				display.PrintStandard(files)
 			}
-		} else {
-			// Path is a file - handle file output
-			if opts.LongFormat {
-				file, err := fs.ReadFile(path)
-				if err == nil {
-					display.PrintLong([]fs.FileInfo{*file}, false)
-				}
-			} else {
-				fmt.Print(path + " ")
-			}
 		}
 
-		// Print newline between multiple paths (after each path's output)
-		if i < len(paths)-1 && multiplePaths {
+		// Print newline between multiple directory segments
+		if i < len(dirsOnly)-1 {
 			fmt.Print("\n")
 		}
-	}
-
-	// Add a final trailing newline on exit if standard inline output was utilized
-	if !opts.LongFormat {
-		fmt.Print("\n")
 	}
 }
 

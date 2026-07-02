@@ -4,18 +4,19 @@ import (
 	"time"
 )
 
+// FileInfo models normalized low-level filesystem property dimensions used across layout displays
 type FileInfo struct {
-	Name          string
-	Path          string
-	IsDir         bool
-	IsSymlink     bool
-	SymlinkTarget string
-	Size          int64
-	ModTime       time.Time
-	ModeString    string
-	Mode          uint32
-	LinkCount     uint64
-	Owner         string
-	Group         string
-	Blocks        int64
+	Name          string    // Base display title string identifying the file target
+	Path          string    // Complete filepath tracking coordinate line mapping metrics
+	IsDir         bool      // Active truth flag determining directory verification contexts
+	IsSymlink     bool      // Active truth flag tracking symlink classification
+	SymlinkTarget string    // String destination target text path pointing to target files
+	Size          int64     // File allocation byte counter volume matching storage limits
+	ModTime       time.Time // Hardware modification time entry mapping parameters
+	ModeString    string    // Readable permission string format layout matching legacy wrappers
+	Mode          uint32    // Numeric type mask and flag bit tracking properties
+	LinkCount     uint64    // Hard link parameter reference counter metrics
+	Owner         string    // Username tracking metric identifying administrative creators
+	Group         string    // Group name validation mapping identifier tracking profile paths
+	Blocks        int64     // Raw physical system 512-byte partition block count metrics
 }

@@ -9,14 +9,16 @@ import (
 	"syscall"
 )
 
+// ReadDir scans targeted folder locations and converts files into generalized metadata struct lists
 func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, errors.New("cannot read directory: " + err.Error())
 	}
 
-	var files []FileInfo
+	var files []FileInfo // files stores the aggregated slice of mapped descriptors
 
+	// Invert parameters to prepend virtual directory targets if hidden tracking flags are active (-a)
 	if showHidden {
 		info, err := os.Stat(path)
 		if err == nil {
@@ -61,12 +63,14 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 	}
 
 	for _, entry := range entries {
+		// Filter files beginning with a single dot if hidden verification state is inactive
 		if !showHidden && strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
 
 		fullPath := path + string(os.PathSeparator) + entry.Name()
 
+		// Lstat reads the link itself without resolving down to the linked file parameter destination
 		lstat, err := os.Lstat(fullPath)
 		if err != nil {
 			continue
@@ -74,7 +78,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 
 		isSymlink := lstat.Mode()&os.ModeSymlink != 0
 
-		var info os.FileInfo
+		var info os.FileInfo // info holds system descriptive traits populated based on symlink rules
 		if isSymlink {
 			info = lstat
 		} else {
@@ -86,12 +90,12 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 
 		owner, group := getOwnership(info)
 
-		var mode uint32
+		var mode uint32 // mode extracts raw numeric bits required to execute safe bitwise sorting masking
 		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 			mode = uint32(stat.Mode)
 		}
 
-		var symlinkTarget string
+		var symlinkTarget string // symlinkTarget tracks the pointed location context string
 		if isSymlink {
 			target, err := os.Readlink(fullPath)
 			if err == nil {
@@ -113,6 +117,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 			Group:         group,
 		}
 
+		// Extract raw low-level syscall properties directly out of POSIX wrappers
 		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 			file.LinkCount = uint64(stat.Nlink)
 			file.Blocks = stat.Blocks
@@ -124,6 +129,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 	return files, nil
 }
 
+// getOwnership extracts user account records mapped matching internal UID and GID constants
 func getOwnership(info os.FileInfo) (owner string, group string) {
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 		u, err := user.LookupId(strconv.Itoa(int(stat.Uid)))
@@ -143,6 +149,7 @@ func getOwnership(info os.FileInfo) (owner string, group string) {
 	return owner, group
 }
 
+// IsDirectory performs an isolated type validation pass on individual tracking paths
 func IsDirectory(path string) (bool, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -151,6 +158,7 @@ func IsDirectory(path string) (bool, error) {
 	return info.IsDir(), nil
 }
 
+// IsSymlink tracks validation metrics for symlinks to see if their targets are valid or broken
 func IsSymlink(path string) (bool, bool, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -163,11 +171,12 @@ func IsSymlink(path string) (bool, bool, error) {
 	}
 
 	_, err = os.Stat(path)
-	targetExists := err == nil
+	targetExists := err == nil // targetExists evaluates true if the targeted link path opens correctly
 
 	return true, targetExists, nil
 }
 
+// ReadFile processes target file metrics directly if parameter lists point directly to explicit files
 func ReadFile(path string) (*FileInfo, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -187,7 +196,7 @@ func ReadFile(path string) (*FileInfo, error) {
 	owner, group := getOwnership(info)
 
 	file := &FileInfo{
-		Name:          path,
+		Name:          path, // Retains the full path parameter input value to match output syntax
 		Path:          path,
 		IsDir:         info.IsDir() && !isSymlink,
 		IsSymlink:     isSymlink,

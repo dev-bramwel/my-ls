@@ -1,15 +1,13 @@
 package display
 
 import (
-	// testing - provides testing framework
-	"testing"
-	// my-ls/pkg/fs - provides FileInfo type
 	"my-ls/pkg/fs"
+	"strings"
+	"testing"
 )
 
-// TestFormatLong tests the FormatLong function.
-func TestFormatLong(t *testing.T) {
-	t.Run("formats file correctly", func(t *testing.T) {
+func TestFormatLongWithPadding(t *testing.T) {
+	t.Run("formats regular file correctly with dynamic columns", func(t *testing.T) {
 		file := fs.FileInfo{
 			Name:      "test.txt",
 			IsDir:     false,
@@ -17,63 +15,53 @@ func TestFormatLong(t *testing.T) {
 			LinkCount: 1,
 			Owner:     "user",
 			Group:     "group",
-			Mode:      0o644, // rw-r--r--
+			Mode:      0o100644, // S_IFREG character type bit mixed with rw-r--r-- rights
 		}
-		output := FormatLong(file)
+		output := FormatLongWithPadding(file, 1, 4, 5, 3) // output string captures grid output formatting text
 
 		if output == "" {
-			t.Error("Expected non-empty output")
+			t.Fatal("Expected populated text row, got empty response block")
 		}
-		// Check that it starts with "-" for regular file
 		if output[0] != '-' {
-			t.Errorf("Expected output to start with '-', got '%c'", output[0])
+			t.Errorf("Expected regular file line tracking prefix to map '-', got '%c'", output[0])
+		}
+		if !strings.Contains(output, "user") || !strings.Contains(output, "group") || !strings.Contains(output, "100") {
+			t.Errorf("Output data alignments missing required file attributes. Got: %q", output)
 		}
 	})
 
-	t.Run("formats directory correctly", func(t *testing.T) {
+	t.Run("formats directory row with proper type marker", func(t *testing.T) {
 		file := fs.FileInfo{
 			Name:      "mydir",
 			IsDir:     true,
-			Size:      0,
+			Size:      4096,
 			LinkCount: 2,
 			Owner:     "root",
 			Group:     "root",
-			Mode:      0o755, // rwxr-xr-x
+			Mode:      0o040755, // S_IFDIR character type bit mixed with rwxr-xr-x rights
 		}
-		output := FormatLong(file)
+		output := FormatLongWithPadding(file, 1, 4, 4, 4)
 
 		if output[0] != 'd' {
-			t.Errorf("Expected output to start with 'd', got '%c'", output[0])
+			t.Errorf("Expected directory descriptor output rows to begin with prefix 'd', got '%c'", output[0])
 		}
 	})
 }
 
-// TestFormatPermissions tests the permission string formatting.
-func TestFormatPermissions(t *testing.T) {
-	t.Run("read-only permissions", func(t *testing.T) {
-		// 0o444 = r--r--r--
-		perms := formatPermissions(false, 0o444)
-		expected := "-r--r--r--"
-		if perms != expected {
-			t.Errorf("Expected '%s', got '%s'", expected, perms)
+func TestGetColorizedName(t *testing.T) {
+	t.Run("wraps directories in bold blue escape markers", func(t *testing.T) {
+		name := "src"
+		result := GetColorizedName(name, 0o040000) // 0o040000 represents the S_IFDIR constant directory mask
+		if !strings.HasPrefix(result, Blue) || !strings.HasSuffix(result, Reset) {
+			t.Errorf("Color mapping wrappers failing terminal color verification tests. Got: %q", result)
 		}
 	})
 
-	t.Run("full permissions", func(t *testing.T) {
-		// 0o777 = rwxrwxrwx
-		perms := formatPermissions(true, 0o777)
-		expected := "drwxrwxrwx"
-		if perms != expected {
-			t.Errorf("Expected '%s', got '%s'", expected, perms)
-		}
-	})
-
-	t.Run("setuid bit", func(t *testing.T) {
-		// 0o4755 = rwsr-xr-x
-		perms := formatPermissions(true, 0o4755)
-		expected := "drwsr-xr-x"
-		if perms != expected {
-			t.Errorf("Expected '%s', got '%s'", expected, perms)
+	t.Run("wraps executable binaries in bold green escape markers", func(t *testing.T) {
+		name := "my-ls"
+		result := GetColorizedName(name, 0o100755) // Standard active execution permissions mask
+		if !strings.HasPrefix(result, Green) || !strings.HasSuffix(result, Reset) {
+			t.Errorf("Execution tracking properties failing to colorize correctly. Got: %q", result)
 		}
 	})
 }

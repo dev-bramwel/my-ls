@@ -72,7 +72,7 @@ make build
 ```bash
 ./my-ls -la /dev
 ```
-### 18. Run both my-ls and the system command ls with the arguments: "-alRrt <directory name>", in which the directory chosen contains folders and files within folders. Time of modification of all files within that folder must be the same.
+### 18. Run both my-ls and the system command ls with the arguments: "-alRrt directory_name", in which the directory chosen contains folders and files within folders. Time of modification of all files within that folder must be the same.
 ```bash
 ./my-ls -alRrt pkg
 ```
@@ -80,5 +80,32 @@ make build
 ```bash
 mkdir - && ./my-ls -
 ```
-### 20. Create file and link for this file and run both my-ls-1 and the system command ls with the arguments: "-l <symlink file>/"
-
+### 20. Create file and link for this file and run both my-ls-1 and the system command ls with the arguments: "-l symlink_file/"
+```bash
+# create original file
+touch target_file.txt
+# create a link to original file
+ln -s target_file.txt my_symlink
+# Running command
+./my-ls -l my_symlink/
+```
+### 21. Create file and link for this file and run both my-ls-1 and the system command ls with the arguments: "-l symlink_file"
+```bash
+./my-ls -l my_symlink
+```
+### 22. Create directory that contains files and link for this directory and run both my-ls-1 and the system command ls with the arguments: "-l symlink_dir"
+```bash
+# create target dir
+mkdir target_dir
+# Create files inside the directory
+touch target_dir/file1.txt target_dir/file2.txt
+# create symlink to the directory
+ln -s target_dir my_dir_symlink
+# run the system commands
+./my-ls -l my_dir_symlink/
+```
+### 23. Create directory that contains files and link for this directory and run both my-ls-1 and the system command ls with the arguments: "-l <symlink dir>"
+```bash
+#same as above but without the training backslash
+./my-ls -l my_dir_symlink
+```

@@ -125,4 +125,24 @@ func TestGetColorizedName(t *testing.T) {
 			t.Errorf("Execution tracking properties failing to colorize correctly. Got: %q", result)
 		}
 	})
+
+	t.Run("colors sticky other-writable directories like GNU ls", func(t *testing.T) {
+		name := "shm"
+		result := GetColorizedName(name, 0o041777)
+		if !strings.HasPrefix(result, "\033[30;42m") || !strings.HasSuffix(result, Reset) {
+			t.Errorf("Sticky other-writable directory color mismatch. Got: %q", result)
+		}
+	})
+
+	t.Run("colors named pipes and sockets", func(t *testing.T) {
+		pipe := GetColorizedName("fifo", 0o010644)
+		if !strings.HasPrefix(pipe, "\033[33m") || !strings.HasSuffix(pipe, Reset) {
+			t.Errorf("Named pipe color mismatch. Got: %q", pipe)
+		}
+
+		socket := GetColorizedName("sock", 0o140755)
+		if !strings.HasPrefix(socket, "\033[01;35m") || !strings.HasSuffix(socket, Reset) {
+			t.Errorf("Socket color mismatch. Got: %q", socket)
+		}
+	})
 }

@@ -11,11 +11,11 @@ import (
 
 // ANSI terminal escape variables targeting specific layout color highlights
 const (
-	Reset      = "\033[0m"        // Disables colors, resetting the terminal brush back to native values
-	Blue       = "\033[1;34m"     // Bold Blue escape tag for Directories
-	Green      = "\033[1;32m"     // Bold Green escape tag for Executable Binaries
-	Cyan       = "\033[1;36m"     // Bold Cyan escape tag for Symbolic Links
-	DeviceOpts = "\033[40;33;01m" // Bold Yellow text over a Black background block for character/block devices
+	Reset      = "\033[0m"     // Disables colors, resetting the terminal brush back to native values
+	Blue       = "\033[01;34m" // Bold Blue escape tag for Directories
+	Green      = "\033[01;32m" // Bold Green escape tag for Executable Binaries
+	Cyan       = "\033[01;36m" // Bold Cyan escape tag for Symbolic Links
+	DeviceOpts = "\033[01;33m" // Bold Yellow text for character/block devices
 )
 
 // FormatLongWithPadding calculates layout spaces dynamically using cell lengths computed in PrintLong
@@ -50,14 +50,9 @@ func FormatLongWithPadding(file fs.FileInfo, maxLinks, maxOwner, maxGroup, maxSi
 		name = coloredName + " -> " + colorizedTarget
 	}
 
-	linkWidth := maxLinks
-	if file.ACLMarker == "+" {
-		linkWidth++
-	}
-
-	return fmt.Sprintf("%s%*s %-*s %-*s %*s %s %s\n",
+	return fmt.Sprintf("%s %*s %-*s %-*s %*s %s %s\n",
 		perms,
-		linkWidth, linkCount,
+		maxLinks, linkCount,
 		maxOwner, file.Owner,
 		maxGroup, file.Group,
 		maxSize, size,

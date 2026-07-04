@@ -107,17 +107,33 @@ func PrintRecursive(path string, showHidden bool, longFormat bool, timeSort bool
 // GetColorizedName queries type bit flags to apply appropriate escape styling parameters
 func GetColorizedName(name string, mode uint32) string {
 	fileType := mode & 0o170000 // fileType stores isolated bit masks characterizing system descriptor shapes
+	perms := mode & 0o7777
+	otherWritable := perms&0o002 != 0
+	sticky := perms&0o1000 != 0
 
 	switch fileType {
 	case 0o040000: // S_IFDIR: Directory entry structure
+		if otherWritable && sticky {
+			return fmt.Sprintf("%s%s%s", "\033[30;42m", name, Reset)
+		}
+		if otherWritable {
+			return fmt.Sprintf("%s%s%s", "\033[34;42m", name, Reset)
+		}
+		if sticky {
+			return fmt.Sprintf("%s%s%s", "\033[37;44m", name, Reset)
+		}
 		return fmt.Sprintf("%s%s%s", Blue, name, Reset)
 	case 0o120000: // S_IFLNK: Symbolic reference line target
 		return fmt.Sprintf("%s%s%s", Cyan, name, Reset)
+	case 0o010000: // S_IFIFO: Named pipe
+		return fmt.Sprintf("%s%s%s", "\033[33m", name, Reset)
+	case 0o140000: // S_IFSOCK: Socket
+		return fmt.Sprintf("%s%s%s", "\033[01;35m", name, Reset)
 	case 0o020000, 0o060000: // S_IFCHR or S_IFBLK: Device node entry points
 		return fmt.Sprintf("%s%s%s", DeviceOpts, name, Reset)
 	default:
 		// Execute permission mask check matching user, group, or global execution targets
-		if mode&0o0111 != 0 {
+		if perms&0o0111 != 0 {
 			return fmt.Sprintf("%s%s%s", Green, name, Reset)
 		}
 	}

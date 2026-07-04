@@ -11,19 +11,19 @@ import (
 
 // ANSI terminal escape variables targeting specific layout color highlights
 const (
-	Reset      = "\033[0m"         // Disables colors, resetting the terminal brush back to native values
-	Blue       = "\033[1;34m"      // Bold Blue escape tag for Directories
-	Green      = "\033[1;32m"      // Bold Green escape tag for Executable Binaries
-	Cyan       = "\033[1;36m"      // Bold Cyan escape tag for Symbolic Links
-	DeviceOpts = "\033[40;33;01m"  // Bold Yellow text over a Black background block for character/block devices
+	Reset      = "\033[0m"        // Disables colors, resetting the terminal brush back to native values
+	Blue       = "\033[1;34m"     // Bold Blue escape tag for Directories
+	Green      = "\033[1;32m"     // Bold Green escape tag for Executable Binaries
+	Cyan       = "\033[1;36m"     // Bold Cyan escape tag for Symbolic Links
+	DeviceOpts = "\033[40;33;01m" // Bold Yellow text over a Black background block for character/block devices
 )
 
 // FormatLongWithPadding calculates layout spaces dynamically using cell lengths computed in PrintLong
 // FormatLongWithPadding calculates layout spaces dynamically using cell lengths computed in PrintLong
 func FormatLongWithPadding(file fs.FileInfo, maxLinks, maxOwner, maxGroup, maxSize int) string {
-	perms := formatPermissions(file.Mode)
+	perms := formatPermissions(file)
 	linkCount := strconv.FormatUint(file.LinkCount, 10)
-	size := strconv.FormatInt(file.Size, 10)
+	size := formatSizeOrDevice(file)
 	date := formatDate(file.ModTime)
 	coloredName := GetColorizedName(file.Name, file.Mode)
 
@@ -40,7 +40,7 @@ func FormatLongWithPadding(file fs.FileInfo, maxLinks, maxOwner, maxGroup, maxSi
 				targetColor = Green
 			}
 		} else {
-			targetColor = "\033[31m" 
+			targetColor = "\033[31m"
 		}
 
 		colorizedTarget := file.SymlinkTarget
@@ -64,23 +64,23 @@ func FormatLongWithPadding(file fs.FileInfo, maxLinks, maxOwner, maxGroup, maxSi
 }
 
 // formatPermissions processes POSIX mode mask numbers to construct the exact 10-character string string layout
-func formatPermissions(mode uint32) string {
-	fileType := mode & 0o170000 // fileType isolates the core system bits defining the type of file descriptor
-	perms := mode & 0o7777      // perms extracts the execution rights, setuid, setgid, and sticky bits
+func formatPermissions(file fs.FileInfo) string {
+	fileType := file.Mode & 0o170000 // fileType isolates the core system bits defining the type of file descriptor
+	perms := file.Mode & 0o7777      // perms extracts the execution rights, setuid, setgid, and sticky bits
 
 	var firstChar string
-	switch fileType {
-	case 0o040000: // S_IFDIR
+	switch {
+	case fileType == 0o040000: // S_IFDIR
 		firstChar = "d"
-	case 0o120000: // S_IFLNK
+	case fileType == 0o120000: // S_IFLNK
 		firstChar = "l"
-	case 0o020000: // S_IFBLK
-		firstChar = "b"
-	case 0o060000: // S_IFCHR
+	case file.IsCharDevice || fileType == 0o020000: // S_IFCHR
 		firstChar = "c"
-	case 0o010000: // S_IFIFO
+	case file.IsBlockDevice || fileType == 0o060000: // S_IFBLK
+		firstChar = "b"
+	case fileType == 0o010000: // S_IFIFO
 		firstChar = "p"
-	case 0o140000: // S_IFSOCK
+	case fileType == 0o140000: // S_IFSOCK
 		firstChar = "s"
 	default:
 		firstChar = "-"
@@ -89,33 +89,104 @@ func formatPermissions(mode uint32) string {
 	result := firstChar // result string is aggregated progressively matching owner, group, and other bit scopes
 
 	// Owner Bit Flags (S_IRUSR, S_IWUSR, S_IXUSR)
-	if perms&0o400 != 0 { result += "r" } else { result += "-" }
-	if perms&0o200 != 0 { result += "w" } else { result += "-" }
-	if perms&0o100 != 0 {
-		if perms&0o4000 != 0 { result += "s" } else { result += "x" } // S_ISUID check
+	if perms&0o400 != 0 {
+		result += "r"
 	} else {
-		if perms&0o4000 != 0 { result += "S" } else { result += "-" }
+		result += "-"
+	}
+	if perms&0o200 != 0 {
+		result += "w"
+	} else {
+		result += "-"
+	}
+	if perms&0o100 != 0 {
+		if perms&0o4000 != 0 {
+			result += "s"
+		} else {
+			result += "x"
+		} // S_ISUID check
+	} else {
+		if perms&0o4000 != 0 {
+			result += "S"
+		} else {
+			result += "-"
+		}
 	}
 
 	// Group Bit Flags (S_IRGRP, S_IWGRP, S_IXGRP)
-	if perms&0o40 != 0 { result += "r" } else { result += "-" }
-	if perms&0o20 != 0 { result += "w" } else { result += "-" }
-	if perms&0o10 != 0 {
-		if perms&0o2000 != 0 { result += "s" } else { result += "x" } // S_ISGID check
+	if perms&0o40 != 0 {
+		result += "r"
 	} else {
-		if perms&0o2000 != 0 { result += "S" } else { result += "-" }
+		result += "-"
+	}
+	if perms&0o20 != 0 {
+		result += "w"
+	} else {
+		result += "-"
+	}
+	if perms&0o10 != 0 {
+		if perms&0o2000 != 0 {
+			result += "s"
+		} else {
+			result += "x"
+		} // S_ISGID check
+	} else {
+		if perms&0o2000 != 0 {
+			result += "S"
+		} else {
+			result += "-"
+		}
 	}
 
 	// Other/World Bit Flags (S_IROTH, S_IWOTH, S_IXOTH)
-	if perms&0o4 != 0 { result += "r" } else { result += "-" }
-	if perms&0o2 != 0 { result += "w" } else { result += "-" }
-	if perms&0o1 != 0 {
-		if perms&0o1000 != 0 { result += "t" } else { result += "x" } // S_ISVTX (Sticky bit) check
+	if perms&0o4 != 0 {
+		result += "r"
 	} else {
-		if perms&0o1000 != 0 { result += "T" } else { result += "-" }
+		result += "-"
+	}
+	if perms&0o2 != 0 {
+		result += "w"
+	} else {
+		result += "-"
+	}
+	if perms&0o1 != 0 {
+		if perms&0o1000 != 0 {
+			result += "t"
+		} else {
+			result += "x"
+		} // S_ISVTX (Sticky bit) check
+	} else {
+		if perms&0o1000 != 0 {
+			result += "T"
+		} else {
+			result += "-"
+		}
 	}
 
 	return result
+}
+
+func formatSizeOrDevice(file fs.FileInfo) string {
+	if isDevice(file) {
+		return fmt.Sprintf("%d, %d", major(file.Rdev), minor(file.Rdev))
+	}
+	return strconv.FormatInt(file.Size, 10)
+}
+
+func isDevice(file fs.FileInfo) bool {
+	if file.IsCharDevice || file.IsBlockDevice {
+		return true
+	}
+	fileType := file.Mode & 0o170000
+	return fileType == 0o020000 || fileType == 0o060000
+}
+
+func major(dev uint64) uint64 {
+	return ((dev >> 8) & 0xfff) | ((dev >> 32) & 0xfffff000)
+}
+
+func minor(dev uint64) uint64 {
+	return (dev & 0xff) | ((dev >> 12) & 0xffffff00)
 }
 
 // formatDate converts system time objects into localized layout variations matching standard ls windows

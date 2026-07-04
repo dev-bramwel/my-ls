@@ -46,8 +46,9 @@ func PrintLong(files []fs.FileInfo, showTotal bool) {
 		if len(f.Group) > maxGroup {
 			maxGroup = len(f.Group)
 		}
-		if len(strconv.FormatInt(f.Size, 10)) > maxSize {
-			maxSize = len(strconv.FormatInt(f.Size, 10))
+		size := formatSizeOrDevice(f)
+		if len(size) > maxSize {
+			maxSize = len(size)
 		}
 	}
 

@@ -10,6 +10,8 @@ type FileInfo struct {
 	Path          string    // Complete filepath tracking coordinate line mapping metrics
 	IsDir         bool      // Active truth flag determining directory verification contexts
 	IsSymlink     bool      // Active truth flag tracking symlink classification
+	IsCharDevice  bool      // Active truth flag tracking Unix character device descriptors
+	IsBlockDevice bool      // Active truth flag tracking Unix block device descriptors
 	SymlinkTarget string    // String destination target text path pointing to target files
 	Size          int64     // File allocation byte counter volume matching storage limits
 	ModTime       time.Time // Hardware modification time entry mapping parameters
@@ -19,4 +21,5 @@ type FileInfo struct {
 	Owner         string    // Username tracking metric identifying administrative creators
 	Group         string    // Group name validation mapping identifier tracking profile paths
 	Blocks        int64     // Raw physical system 512-byte partition block count metrics
+	Rdev          uint64    // Raw device identifier used to print major/minor values for device nodes
 }

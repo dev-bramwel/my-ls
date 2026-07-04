@@ -20,43 +20,49 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 
 	// Invert parameters to prepend virtual directory targets if hidden tracking flags are active (-a)
 	if showHidden {
-		info, err := os.Stat(path)
+		info, err := os.Lstat(path)
 		if err == nil {
 			owner, group := getOwnership(info)
 			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 				files = append(files, FileInfo{
-					Name:       ".",
-					Path:       path,
-					IsDir:      true,
-					Size:       0,
-					ModTime:    info.ModTime(),
-					ModeString: info.Mode().String(),
-					Mode:       uint32(stat.Mode),
-					LinkCount:  uint64(stat.Nlink),
-					Owner:      owner,
-					Group:      group,
-					Blocks:     stat.Blocks,
+					Name:          ".",
+					Path:          path,
+					IsDir:         true,
+					IsCharDevice:  isCharDevice(info.Mode()),
+					IsBlockDevice: isBlockDevice(info.Mode()),
+					Size:          info.Size(),
+					ModTime:       info.ModTime(),
+					ModeString:    info.Mode().String(),
+					Mode:          uint32(stat.Mode),
+					LinkCount:     uint64(stat.Nlink),
+					Owner:         owner,
+					Group:         group,
+					Blocks:        stat.Blocks,
+					Rdev:          uint64(stat.Rdev),
 				})
 			}
 		}
 
 		parentPath := path + string(os.PathSeparator) + ".."
-		info, err = os.Stat(parentPath)
+		info, err = os.Lstat(parentPath)
 		if err == nil {
 			owner, group := getOwnership(info)
 			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 				files = append(files, FileInfo{
-					Name:       "..",
-					Path:       path,
-					IsDir:      true,
-					Size:       0,
-					ModTime:    info.ModTime(),
-					ModeString: info.Mode().String(),
-					Mode:       uint32(stat.Mode),
-					LinkCount:  uint64(stat.Nlink),
-					Owner:      owner,
-					Group:      group,
-					Blocks:     stat.Blocks,
+					Name:          "..",
+					Path:          path,
+					IsDir:         true,
+					IsCharDevice:  isCharDevice(info.Mode()),
+					IsBlockDevice: isBlockDevice(info.Mode()),
+					Size:          info.Size(),
+					ModTime:       info.ModTime(),
+					ModeString:    info.Mode().String(),
+					Mode:          uint32(stat.Mode),
+					LinkCount:     uint64(stat.Nlink),
+					Owner:         owner,
+					Group:         group,
+					Blocks:        stat.Blocks,
+					Rdev:          uint64(stat.Rdev),
 				})
 			}
 		}
@@ -76,17 +82,8 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 			continue
 		}
 
-		isSymlink := lstat.Mode()&os.ModeSymlink != 0
-
-		var info os.FileInfo // info holds system descriptive traits populated based on symlink rules
-		if isSymlink {
-			info = lstat
-		} else {
-			info, err = entry.Info()
-			if err != nil {
-				continue
-			}
-		}
+		info := lstat // Lstat keeps symlink entries and special files as their own filesystem nodes
+		isSymlink := info.Mode()&os.ModeSymlink != 0
 
 		owner, group := getOwnership(info)
 
@@ -108,6 +105,8 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 			Path:          fullPath,
 			IsDir:         entry.IsDir() && !isSymlink,
 			IsSymlink:     isSymlink,
+			IsCharDevice:  isCharDevice(info.Mode()),
+			IsBlockDevice: isBlockDevice(info.Mode()),
 			SymlinkTarget: symlinkTarget,
 			Size:          info.Size(),
 			ModTime:       info.ModTime(),
@@ -121,6 +120,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 			file.LinkCount = uint64(stat.Nlink)
 			file.Blocks = stat.Blocks
+			file.Rdev = uint64(stat.Rdev)
 		}
 
 		files = append(files, file)
@@ -200,6 +200,8 @@ func ReadFile(path string) (*FileInfo, error) {
 		Path:          path,
 		IsDir:         info.IsDir() && !isSymlink,
 		IsSymlink:     isSymlink,
+		IsCharDevice:  isCharDevice(info.Mode()),
+		IsBlockDevice: isBlockDevice(info.Mode()),
 		SymlinkTarget: symlinkTarget,
 		Size:          info.Size(),
 		ModTime:       info.ModTime(),
@@ -212,7 +214,16 @@ func ReadFile(path string) (*FileInfo, error) {
 		file.LinkCount = uint64(stat.Nlink)
 		file.Mode = uint32(stat.Mode)
 		file.Blocks = stat.Blocks
+		file.Rdev = uint64(stat.Rdev)
 	}
 
 	return file, nil
+}
+
+func isCharDevice(mode os.FileMode) bool {
+	return mode&os.ModeDevice != 0 && mode&os.ModeCharDevice != 0
+}
+
+func isBlockDevice(mode os.FileMode) bool {
+	return mode&os.ModeDevice != 0 && mode&os.ModeCharDevice == 0
 }

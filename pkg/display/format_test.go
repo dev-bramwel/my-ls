@@ -46,6 +46,48 @@ func TestFormatLongWithPadding(t *testing.T) {
 			t.Errorf("Expected directory descriptor output rows to begin with prefix 'd', got '%c'", output[0])
 		}
 	})
+
+	t.Run("formats character device with major and minor instead of size", func(t *testing.T) {
+		file := fs.FileInfo{
+			Name:         "null",
+			Size:         0,
+			LinkCount:    1,
+			Owner:        "root",
+			Group:        "root",
+			Mode:         0o020666,
+			IsCharDevice: true,
+			Rdev:         0x103,
+		}
+		output := FormatLongWithPadding(file, 1, 4, 4, 6)
+
+		if output[0] != 'c' {
+			t.Errorf("Expected character device row to begin with prefix 'c', got '%c'", output[0])
+		}
+		if !strings.Contains(output, "1, 3") {
+			t.Errorf("Expected device major/minor in size column. Got: %q", output)
+		}
+	})
+
+	t.Run("formats block device with major and minor instead of size", func(t *testing.T) {
+		file := fs.FileInfo{
+			Name:          "loop0",
+			Size:          0,
+			LinkCount:     1,
+			Owner:         "root",
+			Group:         "root",
+			Mode:          0o060660,
+			IsBlockDevice: true,
+			Rdev:          0x700,
+		}
+		output := FormatLongWithPadding(file, 1, 4, 4, 6)
+
+		if output[0] != 'b' {
+			t.Errorf("Expected block device row to begin with prefix 'b', got '%c'", output[0])
+		}
+		if !strings.Contains(output, "7, 0") {
+			t.Errorf("Expected device major/minor in size column. Got: %q", output)
+		}
+	})
 }
 
 func TestGetColorizedName(t *testing.T) {

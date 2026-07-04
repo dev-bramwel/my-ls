@@ -30,6 +30,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 					IsDir:         true,
 					IsCharDevice:  isCharDevice(info.Mode()),
 					IsBlockDevice: isBlockDevice(info.Mode()),
+					ACLMarker:     aclMarker(path),
 					Size:          info.Size(),
 					ModTime:       info.ModTime(),
 					ModeString:    info.Mode().String(),
@@ -39,11 +40,13 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 					Group:         group,
 					Blocks:        stat.Blocks,
 					Rdev:          uint64(stat.Rdev),
+					Major:         major(uint64(stat.Rdev)),
+					Minor:         minor(uint64(stat.Rdev)),
 				})
 			}
 		}
 
-		parentPath := path + string(os.PathSeparator) + ".."
+		parentPath := joinPath(path, "..")
 		info, err = os.Lstat(parentPath)
 		if err == nil {
 			owner, group := getOwnership(info)
@@ -54,6 +57,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 					IsDir:         true,
 					IsCharDevice:  isCharDevice(info.Mode()),
 					IsBlockDevice: isBlockDevice(info.Mode()),
+					ACLMarker:     aclMarker(parentPath),
 					Size:          info.Size(),
 					ModTime:       info.ModTime(),
 					ModeString:    info.Mode().String(),
@@ -63,6 +67,8 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 					Group:         group,
 					Blocks:        stat.Blocks,
 					Rdev:          uint64(stat.Rdev),
+					Major:         major(uint64(stat.Rdev)),
+					Minor:         minor(uint64(stat.Rdev)),
 				})
 			}
 		}
@@ -74,7 +80,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 			continue
 		}
 
-		fullPath := path + string(os.PathSeparator) + entry.Name()
+		fullPath := joinPath(path, entry.Name())
 
 		// Lstat reads the link itself without resolving down to the linked file parameter destination
 		lstat, err := os.Lstat(fullPath)
@@ -107,6 +113,7 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 			IsSymlink:     isSymlink,
 			IsCharDevice:  isCharDevice(info.Mode()),
 			IsBlockDevice: isBlockDevice(info.Mode()),
+			ACLMarker:     aclMarker(fullPath),
 			SymlinkTarget: symlinkTarget,
 			Size:          info.Size(),
 			ModTime:       info.ModTime(),
@@ -121,6 +128,8 @@ func ReadDir(path string, showHidden bool) ([]FileInfo, error) {
 			file.LinkCount = uint64(stat.Nlink)
 			file.Blocks = stat.Blocks
 			file.Rdev = uint64(stat.Rdev)
+			file.Major = major(uint64(stat.Rdev))
+			file.Minor = minor(uint64(stat.Rdev))
 		}
 
 		files = append(files, file)
@@ -202,6 +211,7 @@ func ReadFile(path string) (*FileInfo, error) {
 		IsSymlink:     isSymlink,
 		IsCharDevice:  isCharDevice(info.Mode()),
 		IsBlockDevice: isBlockDevice(info.Mode()),
+		ACLMarker:     aclMarker(path),
 		SymlinkTarget: symlinkTarget,
 		Size:          info.Size(),
 		ModTime:       info.ModTime(),
@@ -215,6 +225,8 @@ func ReadFile(path string) (*FileInfo, error) {
 		file.Mode = uint32(stat.Mode)
 		file.Blocks = stat.Blocks
 		file.Rdev = uint64(stat.Rdev)
+		file.Major = major(uint64(stat.Rdev))
+		file.Minor = minor(uint64(stat.Rdev))
 	}
 
 	return file, nil
@@ -226,4 +238,30 @@ func isCharDevice(mode os.FileMode) bool {
 
 func isBlockDevice(mode os.FileMode) bool {
 	return mode&os.ModeDevice != 0 && mode&os.ModeCharDevice == 0
+}
+
+func joinPath(dir, name string) string {
+	if strings.HasSuffix(dir, "/") {
+		return dir + name
+	}
+	return dir + "/" + name
+}
+
+func aclMarker(path string) string {
+	_, err := syscall.Getxattr(path, "system.posix_acl_access", nil)
+	if err == nil {
+		return "+"
+	}
+	if err == syscall.ENODATA || err == syscall.ENOTSUP || err == syscall.EOPNOTSUPP {
+		return " "
+	}
+	return " "
+}
+
+func major(dev uint64) uint64 {
+	return ((dev >> 8) & 0xfff) | ((dev >> 32) & 0xfffff000)
+}
+
+func minor(dev uint64) uint64 {
+	return (dev & 0xff) | ((dev >> 12) & 0xffffff00)
 }

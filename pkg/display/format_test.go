@@ -17,7 +17,7 @@ func TestFormatLongWithPadding(t *testing.T) {
 			Group:     "group",
 			Mode:      0o100644, // S_IFREG character type bit mixed with rw-r--r-- rights
 		}
-		output := FormatLongWithPadding(file, 1, 4, 5, 3) // output string captures grid output formatting text
+		output := FormatLongWithPadding(file, 1, 4, 5, 3, 0, 0) // output string captures grid output formatting text
 
 		if output == "" {
 			t.Fatal("Expected populated text row, got empty response block")
@@ -40,7 +40,7 @@ func TestFormatLongWithPadding(t *testing.T) {
 			Group:     "root",
 			Mode:      0o040755, // S_IFDIR character type bit mixed with rwxr-xr-x rights
 		}
-		output := FormatLongWithPadding(file, 1, 4, 4, 4)
+		output := FormatLongWithPadding(file, 1, 4, 4, 4, 0, 0)
 
 		if output[0] != 'd' {
 			t.Errorf("Expected directory descriptor output rows to begin with prefix 'd', got '%c'", output[0])
@@ -56,14 +56,15 @@ func TestFormatLongWithPadding(t *testing.T) {
 			Group:        "root",
 			Mode:         0o020666,
 			IsCharDevice: true,
-			Rdev:         0x103,
+			Major:        1,
+			Minor:        3,
 		}
-		output := FormatLongWithPadding(file, 1, 4, 4, 6)
+		output := FormatLongWithPadding(file, 1, 4, 4, 6, 2, 3)
 
 		if output[0] != 'c' {
 			t.Errorf("Expected character device row to begin with prefix 'c', got '%c'", output[0])
 		}
-		if !strings.Contains(output, "1, 3") {
+		if !strings.Contains(output, " 1,   3") {
 			t.Errorf("Expected device major/minor in size column. Got: %q", output)
 		}
 	})
@@ -77,15 +78,33 @@ func TestFormatLongWithPadding(t *testing.T) {
 			Group:         "root",
 			Mode:          0o060660,
 			IsBlockDevice: true,
-			Rdev:          0x700,
+			Major:         7,
+			Minor:         0,
 		}
-		output := FormatLongWithPadding(file, 1, 4, 4, 6)
+		output := FormatLongWithPadding(file, 1, 4, 4, 6, 2, 3)
 
 		if output[0] != 'b' {
 			t.Errorf("Expected block device row to begin with prefix 'b', got '%c'", output[0])
 		}
-		if !strings.Contains(output, "7, 0") {
+		if !strings.Contains(output, " 7,   0") {
 			t.Errorf("Expected device major/minor in size column. Got: %q", output)
+		}
+	})
+
+	t.Run("appends ACL marker to permission string", func(t *testing.T) {
+		file := fs.FileInfo{
+			Name:      "secure",
+			Size:      1,
+			LinkCount: 1,
+			Owner:     "root",
+			Group:     "root",
+			Mode:      0o100600,
+			ACLMarker: "+",
+		}
+		output := FormatLongWithPadding(file, 1, 4, 4, 1, 0, 0)
+
+		if !strings.HasPrefix(output, "-rw-------+") {
+			t.Errorf("Expected permission string to include ACL marker. Got: %q", output)
 		}
 	})
 }

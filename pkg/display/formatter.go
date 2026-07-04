@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"my-ls/pkg/fs"
 	"os"
-	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -20,18 +20,17 @@ const (
 
 // FormatLongWithPadding calculates layout spaces dynamically using cell lengths computed in PrintLong
 // FormatLongWithPadding calculates layout spaces dynamically using cell lengths computed in PrintLong
-func FormatLongWithPadding(file fs.FileInfo, maxLinks, maxOwner, maxGroup, maxSize int) string {
+func FormatLongWithPadding(file fs.FileInfo, maxLinks, maxOwner, maxGroup, maxSize, maxMajor, maxMinor int) string {
 	perms := formatPermissions(file)
 	linkCount := strconv.FormatUint(file.LinkCount, 10)
-	size := formatSizeOrDevice(file)
+	size := formatSizeOrDevice(file, maxMajor, maxMinor)
 	date := formatDate(file.ModTime)
 	coloredName := GetColorizedName(file.Name, file.Mode)
 
 	name := coloredName
 	if file.IsSymlink && file.SymlinkTarget != "" {
 		targetColor := ""
-		baseDir := filepath.Dir(file.Path)
-		fullTargetCheckPath := filepath.Join(baseDir, file.SymlinkTarget)
+		fullTargetCheckPath := joinPath(parentDir(file.Path), file.SymlinkTarget)
 
 		if info, err := os.Stat(fullTargetCheckPath); err == nil {
 			if info.IsDir() {
@@ -51,10 +50,14 @@ func FormatLongWithPadding(file fs.FileInfo, maxLinks, maxOwner, maxGroup, maxSi
 		name = coloredName + " -> " + colorizedTarget
 	}
 
-	// FIX: Explicitly match every layout verb width operator (* or -*) with its corresponding max constraint integer parameter
-	return fmt.Sprintf("%s %*s %-*s %-*s %*s %s %s\n",
+	linkWidth := maxLinks
+	if file.ACLMarker == "+" {
+		linkWidth++
+	}
+
+	return fmt.Sprintf("%s%*s %-*s %-*s %*s %s %s\n",
 		perms,
-		maxLinks, linkCount,
+		linkWidth, linkCount,
 		maxOwner, file.Owner,
 		maxGroup, file.Group,
 		maxSize, size,
@@ -63,7 +66,7 @@ func FormatLongWithPadding(file fs.FileInfo, maxLinks, maxOwner, maxGroup, maxSi
 	)
 }
 
-// formatPermissions processes POSIX mode mask numbers to construct the exact 10-character string string layout
+// formatPermissions processes POSIX mode mask numbers to construct the exact 11-character string layout
 func formatPermissions(file fs.FileInfo) string {
 	fileType := file.Mode & 0o170000 // fileType isolates the core system bits defining the type of file descriptor
 	perms := file.Mode & 0o7777      // perms extracts the execution rights, setuid, setgid, and sticky bits
@@ -163,12 +166,16 @@ func formatPermissions(file fs.FileInfo) string {
 		}
 	}
 
-	return result
+	marker := file.ACLMarker
+	if marker == "" {
+		marker = " "
+	}
+	return result + marker
 }
 
-func formatSizeOrDevice(file fs.FileInfo) string {
+func formatSizeOrDevice(file fs.FileInfo, maxMajor, maxMinor int) string {
 	if isDevice(file) {
-		return fmt.Sprintf("%d, %d", major(file.Rdev), minor(file.Rdev))
+		return fmt.Sprintf("%*d, %*d", maxMajor, file.Major, maxMinor, file.Minor)
 	}
 	return strconv.FormatInt(file.Size, 10)
 }
@@ -181,12 +188,22 @@ func isDevice(file fs.FileInfo) bool {
 	return fileType == 0o020000 || fileType == 0o060000
 }
 
-func major(dev uint64) uint64 {
-	return ((dev >> 8) & 0xfff) | ((dev >> 32) & 0xfffff000)
+func parentDir(path string) string {
+	index := strings.LastIndex(path, "/")
+	if index <= 0 {
+		return "."
+	}
+	return path[:index]
 }
 
-func minor(dev uint64) uint64 {
-	return (dev & 0xff) | ((dev >> 12) & 0xffffff00)
+func joinPath(dir, name string) string {
+	if strings.HasPrefix(name, "/") {
+		return name
+	}
+	if strings.HasSuffix(dir, "/") {
+		return dir + name
+	}
+	return dir + "/" + name
 }
 
 // formatDate converts system time objects into localized layout variations matching standard ls windows

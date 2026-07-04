@@ -35,6 +35,8 @@ func PrintLong(files []fs.FileInfo, showTotal bool) {
 	maxOwner := 0
 	maxGroup := 0
 	maxSize := 0
+	maxMajor := 0
+	maxMinor := 0
 
 	for _, f := range files {
 		if len(strconv.FormatUint(f.LinkCount, 10)) > maxLinks {
@@ -46,14 +48,30 @@ func PrintLong(files []fs.FileInfo, showTotal bool) {
 		if len(f.Group) > maxGroup {
 			maxGroup = len(f.Group)
 		}
-		size := formatSizeOrDevice(f)
-		if len(size) > maxSize {
-			maxSize = len(size)
+		if isDevice(f) {
+			majorWidth := len(strconv.FormatUint(f.Major, 10))
+			if majorWidth > maxMajor {
+				maxMajor = majorWidth
+			}
+			minorWidth := len(strconv.FormatUint(f.Minor, 10))
+			if minorWidth > maxMinor {
+				maxMinor = minorWidth
+			}
+		} else {
+			sizeWidth := len(strconv.FormatInt(f.Size, 10))
+			if sizeWidth > maxSize {
+				maxSize = sizeWidth
+			}
 		}
 	}
 
+	deviceWidth := maxMajor + 2 + maxMinor
+	if deviceWidth > maxSize {
+		maxSize = deviceWidth
+	}
+
 	for _, file := range files {
-		fmt.Print(FormatLongWithPadding(file, maxLinks, maxOwner, maxGroup, maxSize))
+		fmt.Print(FormatLongWithPadding(file, maxLinks, maxOwner, maxGroup, maxSize, maxMajor, maxMinor))
 	}
 }
 

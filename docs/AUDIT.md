@@ -66,7 +66,7 @@ make build
 ```
 ### 16. Run both my-ls and the system command ls with the arguments: "-lR directory_name///sub_directory_name/// directory_name/sub_directory_name/"
 ```bash
-./my-ls -lR pkg///config/// cmd/my-ls/
+./my-ls -lR pkg///config/// pkg/config/
 ```
 ### 17. Run both my-ls and the system command ls with the arguments: "-la /dev"
 ```bash

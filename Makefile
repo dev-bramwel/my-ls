@@ -20,7 +20,7 @@ test:
 
 clean:
 	@echo "🧹 Cleaning up build artifacts..."
-	@rm -rf ./$(BINARY_NAME)
+	@rm -rf ./$(BINARY_NAME) my_symlink target_file.txt my_dir_symlink
 	@go clean
 	@echo "✨ Clean complete."
 

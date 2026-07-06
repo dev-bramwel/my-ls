@@ -1,0 +1,16 @@
+version: 2
+
+project_name: my-ls
+
+builds:
+  - binary: my-ls
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+archives:
+  - formats: [binary]
+
+release:
+  draft: false

@@ -3,14 +3,19 @@ version: 2
 project_name: my-ls
 
 builds:
-  - binary: my-ls
+  - id: my-ls
+    binary: my-ls
+    main: ./cmd/my-ls
     goos:
       - linux
     goarch:
       - amd64
 
 archives:
-  - formats: [binary]
+  - id: default
+    formats: [binary]
+    builds:
+      - my-ls
 
 release:
   draft: false
